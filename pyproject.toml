@@ -1,0 +1,19 @@
+
+[project]
+name = "python-app"
+version = "0.1.0"
+description = "A Redis server implementation"
+readme = "README.md"
+authors = [
+    {name = "Maksym Somushkin", email = "syomushkin.maxim@gmail.com"}
+]
+license = {text = "MIT"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+requires-python = ">=3.7"
+dependencies = [
+    "pytest>=7.0.0",
+]
