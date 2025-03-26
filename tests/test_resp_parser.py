@@ -1,12 +1,13 @@
 import unittest
 
-from app.resp_parser import RESPParser
+from app.resp_parser import RESPParser, RESPInvalidFormatError
 
 
 class TestRESPParser(unittest.TestCase):
     def setUp(self):
         self.parser = RESPParser()
 
+    # Simple String Tests
     def test_partial_simple_string(self):
         data = b"+OK"
         result = self.parser.parse(data)
@@ -17,6 +18,7 @@ class TestRESPParser(unittest.TestCase):
         result = self.parser.parse(data)
         self.assertEqual(result, ("OK", 5))
 
+    # Error Message Tests
     def test_partial_error_message(self):
         data = b"-ERROR"
         result = self.parser.parse(data)
@@ -27,6 +29,7 @@ class TestRESPParser(unittest.TestCase):
         result = self.parser.parse(data)
         self.assertEqual(result, ("ERROR", 8))
 
+    # Integer Tests
     def test_partial_integer(self):
         data = b":100"
         result = self.parser.parse(data)
@@ -37,6 +40,12 @@ class TestRESPParser(unittest.TestCase):
         result = self.parser.parse(data)
         self.assertEqual(result, (1000, 7))
 
+    def test_invalid_integer(self):
+        data = b":abc\r\n"
+        with self.assertRaises(RESPInvalidFormatError):
+            self.parser.parse(data)
+
+    # Bulk String Tests
     def test_partial_bulk_string(self):
         data = b"$6\r\nfoob"
         result = self.parser.parse(data)
@@ -52,6 +61,7 @@ class TestRESPParser(unittest.TestCase):
         result = self.parser.parse(data)
         self.assertEqual(result, (None, 5))
 
+    # Array Tests
     def test_partial_array(self):
         data = b"*2\r\n$3\r\nfoo"
         result = self.parser.parse(data)
@@ -66,10 +76,16 @@ class TestRESPParser(unittest.TestCase):
         data = b"*-1\r\n"
         result = self.parser.parse(data)
         self.assertEqual(result, (None, 5))
-        
+    
+    # Error Handling Tests
     def test_type_error(self):
         with self.assertRaises(TypeError):
             self.parser.parse("not bytes")
+            
+    def test_unsupported_type(self):
+        data = b"?invalid\r\n"
+        with self.assertRaises(RESPInvalidFormatError):
+            self.parser.parse(data)
 
 
 if __name__ == "__main__":
