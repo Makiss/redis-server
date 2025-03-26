@@ -1,31 +1,34 @@
-# Python Project
+# Redis Server Project
 
-A generic Python application.
+A Redis server implementation in Python.
 
-## Setup
+## Development
 
-1. Create a virtual environment:
-   ```
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
+### Code Formatting
 
-2. Install the project in development mode:
-   ```
-   pip install -e ".[dev]"
-   ```
+This project uses the following tools for code formatting and linting:
 
-## Usage
+- **Black**: Code formatter
+- **isort**: Import sorter
+- **flake8**: Code linter
 
-TODO: Add usage examples
+To install these tools:
 
-## Testing
-
-Run the tests with pytest:
-```
-pytest
+```bash
+pip install -e ".[dev]"
 ```
 
-## License
+To format the code:
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+```bash
+# Format code with Black
+black app tests
+
+# Sort imports
+isort app tests
+
+# Run linting checks
+flake8 app tests
+```
+
+You can also set up your editor to run these automatically on save.

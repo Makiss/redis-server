@@ -19,7 +19,7 @@ env/
 .coverage
 htmlcov/
 
-# Type checking
+# Formatting and linting
 .mypy_cache/
 
 # IDE specific files
