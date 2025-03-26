@@ -42,21 +42,20 @@ class RESPParser:
         if not data:
             return None, 0
             
-        # Get the parser for the RESP type marker
         first_byte = data[0:1]
         parser = self._type_parsers.get(first_byte)
         
         if parser:
             return parser(data)
         else:
-            raise RESPInvalidFormatError(f"Unsupported RESP type: {first_byte!r}")
+            raise RESPInvalidFormatError(f"Unsupported RESP type: {first_byte}")
     
     def _find_line_end(self, data):
         """Find the end of a RESP line (CRLF)."""
         end_idx = data.find(b'\r\n')
         return end_idx
     
-    def _parse_line(self, data, transform_func=None):
+    def _parse_line(self, data):
         """
         Parse a simple RESP line ending with CRLF.
         
@@ -72,32 +71,30 @@ class RESPParser:
             return None, 0
         
         content = data[1:end_idx]
-        bytes_consumed = end_idx + 2  # Include CRLF
-        
-        if transform_func:
-            try:
-                parsed_data = transform_func(content)
-            except ValueError as e:
-                raise RESPInvalidFormatError(f"Invalid format: {str(e)}")
-        else:
-            parsed_data = content
+        bytes_consumed = end_idx + 2
+
+        parsed_data = content
             
         return parsed_data, bytes_consumed
             
     def _parse_simple_string(self, data):
         """Parse a simple string (+)."""
-        return self._parse_line(data, lambda x: x.decode('utf-8'))
+        return self._parse_line(data)
         
     def _parse_error(self, data):
         """Parse an error (-)."""
-        return self._parse_line(data, lambda x: x.decode('utf-8'))
+        return self._parse_line(data)
         
     def _parse_integer(self, data):
         """Parse an integer (:)."""
-        return self._parse_line(data, lambda x: int(x))
+        return self._parse_line(data)
         
     def _parse_bulk_string(self, data):
-        """Parse a bulk string ($)."""
+        """Parse a bulk string ($).
+        
+        The format is: $<length>\r\n<data>\r\n
+        Where $-1\r\n represents a null value.
+        """
         end_idx = self._find_line_end(data)
         if end_idx == -1:
             return None, 0
@@ -105,11 +102,14 @@ class RESPParser:
         try:
             length = int(data[1:end_idx])
         except ValueError:
-            raise RESPInvalidFormatError(f"Invalid bulk string length: {data[1:end_idx]!r}")
+            raise RESPInvalidFormatError(f"Invalid bulk string length: {data[1:end_idx]}")
             
-        if length == -1:
+        if length == -1:  # Null bulk string
             return None, end_idx + 2
         
+        if length < -1:
+            raise RESPInvalidFormatError(f"Invalid bulk string length: {length} (must be >= -1)")
+            
         bulk_start = end_idx + 2
         bulk_end = bulk_start + length
         
@@ -117,16 +117,21 @@ class RESPParser:
         if len(data) < bulk_end + 2:
             return None, 0
             
-        # Check for proper termination with CRLF
         if data[bulk_end:bulk_end+2] != b'\r\n':
             raise RESPInvalidFormatError("Bulk string not properly terminated with CRLF")
+
+        parsed_data = data[bulk_start:bulk_end]
             
-        parsed_data = data[bulk_start:bulk_end].decode('utf-8')
         bytes_consumed = bulk_end + 2
         return parsed_data, bytes_consumed
         
     def _parse_array(self, data):
-        """Parse an array (*)."""
+        """Parse an array (*).
+        
+        The format is: *<count>\r\n<element1><element2>...
+        Where *-1\r\n represents a null array.
+        *0\r\n represents an empty array.
+        """
         end_idx = self._find_line_end(data)
         if end_idx == -1:
             return None, 0
