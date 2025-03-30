@@ -1,14 +1,40 @@
 import socket
 import threading
+from app.resp_parser import RESPParser
 
 def handle_client(connection):
     """Handle communication with a single client"""
+    parser = RESPParser()
+    buffer = b""
+
     try:
         while True:
             data = connection.recv(1024)
             if not data:
                 break
-            connection.sendall(b"+PONG\r\n")
+
+            buffer += data
+            parsed_data, bytes_consumed = parser.parse(buffer)
+
+            if parsed_data is None:
+                continue
+
+            buffer = buffer[bytes_consumed:]
+
+            if isinstance(parsed_data, list) and len(parsed_data) > 0:
+                command = parsed_data[0].upper() if isinstance(parsed_data[0], str) else parsed_data[0].decode('utf-8').upper()
+
+                if command == "PING":
+                    response = b"+PONG\r\n"
+                elif command == "ECHO" and len(parsed_data) > 1:
+                    arg = parsed_data[1]
+                    if not isinstance(arg, bytes):
+                        arg = str(arg).encode('utf-8')
+                    response = f"${len(arg)}\r\n".encode('utf-8') + arg + b"\r\n"
+                else:
+                    response = b"-ERR unknown command\r\n"
+                
+                connection.sendall(response)
     except Exception as e:
         print(f"Error handling client: {e}")
     finally:
