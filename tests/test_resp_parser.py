@@ -83,7 +83,6 @@ class TestRESPParser(unittest.TestCase):
             self.parser.parse(data)
     
     def test_empty_data(self):
-        """Test that empty data returns (None, 0)."""
         data = b""
         result = self.parser.parse(data)
         self.assertEqual(result, (None, 0))

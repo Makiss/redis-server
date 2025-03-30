@@ -3,6 +3,8 @@ import logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
+CRLF_LENGTH = 2
+
 class RESPParserError(Exception):
     """Base class for RESP parser errors."""
     pass
@@ -71,7 +73,7 @@ class RESPParser:
             return None, 0
         
         content = data[1:end_idx]
-        bytes_consumed = end_idx + 2
+        bytes_consumed = end_idx + CRLF_LENGTH
 
         parsed_data = content
             
@@ -104,25 +106,24 @@ class RESPParser:
         except ValueError:
             raise RESPInvalidFormatError(f"Invalid bulk string length: {data[1:end_idx]}")
             
-        if length == -1:  # Null bulk string
-            return None, end_idx + 2
+        if length == -1:
+            return None, end_idx + CRLF_LENGTH
         
         if length < -1:
             raise RESPInvalidFormatError(f"Invalid bulk string length: {length} (must be >= -1)")
             
-        bulk_start = end_idx + 2
+        bulk_start = end_idx + CRLF_LENGTH
         bulk_end = bulk_start + length
         
-        # Check if we have enough data
-        if len(data) < bulk_end + 2:
+        if len(data) < bulk_end + CRLF_LENGTH:
             return None, 0
             
-        if data[bulk_end:bulk_end+2] != b'\r\n':
+        if data[bulk_end:bulk_end+CRLF_LENGTH] != b'\r\n':
             raise RESPInvalidFormatError("Bulk string not properly terminated with CRLF")
 
         parsed_data = data[bulk_start:bulk_end]
             
-        bytes_consumed = bulk_end + 2
+        bytes_consumed = bulk_end + CRLF_LENGTH
         return parsed_data, bytes_consumed
         
     def _parse_array(self, data):
@@ -139,13 +140,13 @@ class RESPParser:
         try:
             num_elements = int(data[1:end_idx])
         except ValueError:
-            raise RESPInvalidFormatError(f"Invalid array length: {data[1:end_idx]!r}")
+            raise RESPInvalidFormatError(f"Invalid array length: {data[1:end_idx]}")
             
         if num_elements == -1:
-            return None, end_idx + 2
+            return None, end_idx + CRLF_LENGTH
         
         elements = []
-        bytes_consumed = end_idx + 2
+        bytes_consumed = end_idx + CRLF_LENGTH
         
         for _ in range(num_elements):
             if bytes_consumed >= len(data):
